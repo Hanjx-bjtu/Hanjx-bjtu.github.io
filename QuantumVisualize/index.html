@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量子计算 — 布洛赫球可视化（单/多量子比特）</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@9.5.1/lib/browser/math.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌐 量子计算概念可视化平台</h1>
+            <p class="subtitle">量子比特可视化</p>
+        </header>
+        
+        <!-- 选项卡切换 -->
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('single')">单量子比特</button>
+                <button class="tab-btn" onclick="switchTab('multi')">多量子比特系统</button>
+                <!-- <button class="tab-btn" onclick="switchTab('calculator')">模拟量子比特计算器</button> -->
+                <button class="tab-btn" onclick="switchTab('calculator')">量子算法演示</button>
+            </div>
+        </div>
+        
+        <!-- 单量子比特面板 -->
+        <div id="single-tab" class="tab-content active">
+            <div class="main-content">
+                <div class="left-panel">
+                    <div id="blochSphere" class="bloch-container"></div>
+                    <div class="controls">
+                        <button id="resetView" class="btn">重置视角</button>
+                        <button id="toggleRotation" class="btn">旋转: 开</button>
+                        <div class="info-box">
+                            <div>当前态: <span id="quantumState">|0⟩</span></div>
+                            <div>布洛赫坐标: <span id="coordinates">(0, 0, 1)</span></div>
+                            <div>全局相位（参考）: <span id="phase">0°</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="right-panel">
+                    <div class="quantum-controls">
+                        <h2>单量子比特控制器</h2>
+                        
+                        <div class="control-group">
+                            <h3>常用基态 / 叠加态</h3>
+                            <div class="state-buttons">
+                                <button class="btn state-btn" data-state="0">|0⟩（逻辑 0）</button>
+                                <button class="btn state-btn" data-state="1">|1⟩（逻辑 1）</button>
+                                <button class="btn state-btn" data-state="plus">|+⟩ = (|0⟩+|1⟩)/√2</button>
+                                <button class="btn state-btn" data-state="minus">|-⟩ = (|0⟩-|1⟩)/√2</button>
+                                <button class="btn state-btn" data-state="iplus">|+i⟩</button>
+                                <button class="btn state-btn" data-state="iminus">|-i⟩</button>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>布洛赫角度（参数化态）</h3>
+                            <div class="slider-container">
+                                <label for="theta">极角 θ (0°–180°): <span id="thetaValue">0°</span></label>
+                                <input type="range" id="theta" min="0" max="180" value="0" step="1">
+                            </div>
+                            <div class="slider-container">
+                                <label for="phi">方位角 φ (0°–360°): <span id="phiValue">0°</span></label>
+                                <input type="range" id="phi" min="0" max="360" value="0" step="1">
+                            </div>
+                            <small>注：任何单比特纯态可表示为 |ψ⟩ = cos(θ/2)|0⟩ + e^{iφ} sin(θ/2)|1⟩</small>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>常用量子门（单比特）</h3>
+                            <div class="gate-buttons">
+                                <button class="btn gate-btn" data-gate="X">X（Pauli-X）</button>
+                                <button class="btn gate-btn" data-gate="Y">Y（Pauli-Y）</button>
+                                <button class="btn gate-btn" data-gate="Z">Z（Pauli-Z）</button>
+                                <button class="btn gate-btn" data-gate="H">H（Hadamard）</button>
+                                <button class="btn gate-btn" data-gate="S">S（相位门）</button>
+                                <button class="btn gate-btn" data-gate="T">T（π/8 门）</button>
+                            </div>
+                            <div id="gateInfoPanel" class="gate-info-panel">
+                                <h4>量子门信息</h4>
+                                <div id="gateDesc" class="gate-desc">点击量子门查看功能描述、矩阵与计算过程。</div>
+                                <div id="gateMatrix" class="gate-matrix" style="font-family: monospace; white-space: pre; margin-top:8px;"></div>
+                                <div id="gateComputation" class="gate-computation" style="font-family: monospace; white-space: pre-wrap; margin-top:8px; max-height:180px; overflow:auto;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>自定义复振幅（归一化后应用）</h3>
+                            <div class="input-group">
+                                <label>α = 实部 + i·虚部</label>
+                                <input type="number" id="alphaReal" step="0.1" value="1" title="α 实部">
+                                <input type="number" id="alphaImag" step="0.1" value="0" title="α 虚部">
+                            </div>
+                            <div class="input-group">
+                                <label>β = 实部 + i·虚部</label>
+                                <input type="number" id="betaReal" step="0.1" value="0" title="β 实部">
+                                <input type="number" id="betaImag" step="0.1" value="0" title="β 虚部">
+                            </div>
+                            <button id="applyCustom" class="btn">应用自定义态（并归一化）</button>
+                            <small>注意：输入的 α, β 将在应用前按 |α|^2+|β|^2 = 1 归一化</small>
+                        </div>
+                        
+                        <div class="quantum-info">
+                            <h3>当前量子态信息（单比特）</h3>
+                            <div class="info-content">
+                                <div>态矢量: |ψ⟩ = <span id="stateVector">1·|0⟩ + 0·|1⟩</span></div>
+                                <div>密度矩阵 ρ: <span id="densityMatrix">[[1, 0], [0, 0]]</span></div>
+                                <div>布洛赫向量: <span id="blochVector">(0, 0, 1)</span></div>
+                                <div>测量概率: P(|0⟩)=<span id="prob0">100%</span>, P(|1⟩)=<span id="prob1">0%</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 多量子比特面板 -->
+        <div id="multi-tab" class="tab-content">
+            <div class="main-content">
+                <div class="left-panel">
+                    <div id="multiQubitSphere" class="bloch-container"></div>
+                    <div class="controls">
+                        <button id="multiResetView" class="btn">重置视角</button>
+                        <button id="multiToggleRotation" class="btn">旋转: 开</button>
+                        <div class="info-box">
+                            <div>量子比特数: <span id="qubitCountDisplay">2 个</span></div>
+                            <div>系统态（张量积表示）: <span id="multiQubitState">|0⟩ ⊗ |0⟩</span></div>
+                            <!-- <div><span id="entanglementInfo">纠缠度（简要）：0.000</span></div> -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="right-panel">
+                    <div class="quantum-controls">
+                        <h2>多量子比特控制器</h2>
+                        
+                        <div class="control-group">
+                            <h3>系统配置</h3>
+                            <div class="slider-container">
+                                <select id="qubitCount" class="btn" style="width: 100%; padding: 10px;">
+                                    <option value="2" selected>2 个量子比特</option>
+                                    <option value="3">3 个量子比特</option>
+                                    <option value="4">4 个量子比特</option>
+                                    <option value="5">5 个量子比特</option>
+                                </select>
+                                <small>注：希尔伯特空间维度为 2^n（n 为比特数）</small>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>多量子比特门</h3>
+                            <div class="gate-buttons">
+                                <button class="btn multi-gate-btn" data-gate="CNOT">CNOT（受控非门）</button>
+                                <button class="btn multi-gate-btn" data-gate="SWAP">SWAP（交换门）</button>
+                                <button class="btn multi-gate-btn" data-gate="CZ">CZ（受控-Z）</button>
+                                <button class="btn multi-gate-btn" data-gate="Bell">创建 Bell 态</button>
+                                <button class="btn multi-gate-btn" data-gate="GHZ">创建 GHZ 态</button>
+                            </div>
+                            <div id="multiGateInfoPanel" class="gate-info-panel">
+                                <h4>门信息（多比特）</h4>
+                                <div id="multiGateDesc" class="gate-desc">点击多比特门查看功能描述与计算过程。</div>
+                                <div id="multiGateMatrix" class="gate-matrix" style="font-family: monospace; white-space: pre; margin-top:8px;"></div>
+                                <div id="multiGateComputation" class="gate-computation" style="font-family: monospace; white-space: pre-wrap; margin-top:8px; max-height:180px; overflow:auto;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>单个量子比特（局部）控制</h3>
+                            <div id="individualControls">
+                                <!-- 根据比特数动态生成每个比特的局部布洛赫角度控制 -->
+                            </div>
+                        </div>
+                        
+                        <!-- <div class="quantum-info">
+                            <h3>系统信息（多比特）</h3>
+                            <div class="info-content">
+                                <div>希尔伯特空间维度: <span id="stateDimension">2^n（n 为比特数）</span></div>
+                                <div>态向量（张量积形式）: <span id="globalStateVector">计算中...</span></div>
+                                <div>纠缠测度（示例）: <span id="entanglementMeasure">0.000</span></div>
+                                <div>各比特局部态:</div>
+                                <div id="individualStates">|0⟩, |0⟩</div>
+                            </div>
+                        </div> -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 量子比特计算器面板 -->
+        <div id="calculator-tab" class="tab-content">
+            <div class="main-content">
+                <div class="left-panel">
+                    <div style="padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                        <h3>量子态演化过程</h3>
+                        <div id="evolutionSteps" style="overflow-y: auto; max-height: 500px; padding: 10px;">
+                            <div style="color: #888;">执行门序列后显示演化过程...</div>
+                        </div>
+                    </div>
+                    <div style="padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-top: 20px;">
+                        <h3>最终量子态（Dirac记号）</h3>
+                        <div id="finalDiracForm" style="font-family: monospace; font-size: 1rem; word-wrap: break-word; color: #64b5f6;">
+                            |0⟩
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="right-panel">
+                    <div class="quantum-controls">
+                        <h2>量子计算演示器</h2>
+                        
+                        <div class="control-group">
+                            <h3>初始量子态</h3>
+                            <div class="state-buttons" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <button class="btn" onclick="setInitialState('0')" style="background: rgba(100, 181, 246, 0.3);">|0⟩</button>
+                                <button class="btn" onclick="setInitialState('1')" style="background: rgba(100, 181, 246, 0.3);">|1⟩</button>
+                                <button class="btn" onclick="setInitialState('plus')" style="background: rgba(100, 181, 246, 0.3);">|+⟩</button>
+                                <button class="btn" onclick="setInitialState('minus')" style="background: rgba(100, 181, 246, 0.3);">|-⟩</button>
+                            </div>
+                            <div style="margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                                <small>当前初态: <span id="initialStateDisplay">|0⟩</span></small>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>系统配置</h3>
+                            <div>
+                                <label for="calcQubitCount" style="display: block; margin-bottom: 8px;">量子比特数：</label>
+                                <select id="calcQubitCount" style="width: 100%; padding: 10px; border-radius: 6px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                                    <option value="1">1 个比特</option>
+                                    <option value="2" selected>2 个比特</option>
+                                    <option value="3">3 个比特</option>
+                                    <option value="4">4 个比特</option>
+                                    <option value="5">5 个比特</option>
+                                </select>
+                                <small>（仅支持 1-5 比特以保证实时计算性能）</small>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>量子门序列（Dirac表达式）</h3>
+                            <div>
+                                <textarea id="gateSequence" placeholder="示例：&#10;H0 CNOT01&#10;X1 Z0&#10;H0 H1 H2&#10;&#10;支持格式：&#10;X0, Y1, Z2 - Pauli 门&#10;H0, S1, T2 - 其他单比特门&#10;RX0(90), RY1(45) - 旋转门（度）&#10;CNOT01, CNOT10 - 受控非&#10;CZ01 - 受控-Z&#10;SWAP01 - 交换&#10;" rows="6" style="width: 100%; border-radius: 6px; padding: 10px; background: rgba(0,0,0,0.2); color: #e1f5fe; border: 1px solid rgba(100, 181, 246, 0.5); font-family: monospace; font-size: 0.9rem;"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>运算控制</h3>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <button id="executeSequence" class="btn" style="background: linear-gradient(135deg, #667eea, #764ba2); font-weight: bold; padding: 12px;">▶ 执行门序列</button>
+                                <button id="resetCalculator" class="btn" style="background: rgba(255, 107, 107, 0.3);">↻ 重置（恢复初态）</button>
+                                <button id="clearSequence" class="btn" style="background: rgba(100, 100, 100, 0.3);">⌫ 清除输入</button>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h3>测量模拟</h3>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="number" id="measurementTimes" value="1000" min="1" max="10000" style="flex: 1; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+                                <button id="performMeasurement" class="btn" style="flex: 1;">测量</button>
+                            </div>
+                            <div id="measurementResults" style="margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-family: monospace; font-size: 0.85rem;">
+                                按"测量"按钮显示统计结果...
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <h3>量子算法演示</h3>
+                            <div style="display: grid; gap: 8px;">
+                                <label for="algorithmSelect">选择算法：</label>
+                                <select id="algorithmSelect" style="padding:8px; border-radius:6px;">
+                                    <option value="deutsch" title="
+                                    Deutsch-Jozsa用于确定一个给定的布尔函数是常数函数还是平衡函数。该算法利用量子叠加和干涉的特性，能够在单次查询中完成这一任务，而经典算法在最坏情况下需要多次查询。
+                                    ">Deutsch-Jozsa</option>
+                                    <option value="grover" title="
+                                    Grover旨在在无序数据库中高效地查找特定项。与经典搜索算法需要线性时间复杂度不同，Grover算法利用量子叠加和干涉，实现了平方根时间复杂度的搜索，大大提高了搜索效率。
+                                    ">Grover 搜索</option>
+                                    <option value="qft" title="
+                                    量子傅里叶变换 (QFT)用于将量子态从时域转换到频域。它是经典傅里叶变换的量子版本，能够在多项式时间内实现对量子态的频率分析。QFT 在许多量子算法中起着关键作用，如 Shor 的质因数分解算法。
+                                    ">量子傅里叶变换 (QFT)</option>
+                                    <option value="qpe" title="
+                                    量子相位估计 (QPE)用于估计量子态的相位信息。该算法通过构建特定的量子电路，能够高效地提取量子态的相位，从而在许多量子算法中发挥重要作用，如 Shor 的质因数分解和量子模拟。
+                                    ">量子相位估计 (QPE)</option>
+                                </select>
+
+                                <div id="algorithmParams" style="display: grid; gap:6px;">
+                                    <!-- 动态参数区域，由 quantumAlgorithms.js 填充 -->
+                                </div>
+
+                                <button id="runAlgorithm" class="btn" style="background: linear-gradient(135deg, #43cea2, #185a9d);">运行算法</button>
+                            </div>
+                        </div>
+                        
+                        <div class="quantum-info">
+                            <h3>计算结果分析</h3>
+                            <div class="info-content">
+                                <div>态向量（复数形式）:</div>
+                                <div id="resultAmplitudes" style="font-family: monospace; font-size: 0.9rem; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; max-height: 150px; overflow-y: auto;">
+                                    计算后显示...
+                                </div>
+                                <div style="margin-top: 12px;">
+                                    <div>测量概率（计算基）:</div>
+                                    <div id="resultProbabilities" style="font-family: monospace; font-size: 0.85rem; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; max-height: 150px; overflow-y: auto;">
+                                        计算后显示...
+                                    </div>
+                                </div>
+                                <div style="margin-top: 12px; padding: 10px; background: rgba(100, 181, 246, 0.1); border-left: 3px solid #64b5f6; border-radius: 6px;">
+                                    <!-- <small>纠缠信息: <span id="entanglementInfo" style="color: #64b5f6;">无纠缠</span></small> -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>说明：布洛赫球用于表示单量子比特纯态；多量子比特系统需使用张量积描述，纠缠是多体量子态的重要特性。</p>
+            <p style="margin-top: 10px; font-size: 0.8rem; color: #888;">
+                单比特：球面上的点（纯态）；多比特：2^n 维希尔伯特空间，局部测量与纠缠需区分。
+            </p>
+        </footer>
+    </div>
+    
+    <script src="blochSphere.js"></script>
+    <script src="multiQubitVisualizer.js"></script>
+    <script src="quantumEngine.js"></script>
+    <script src="quantumAlgorithms.js"></script>
+    <script>
+        // 全局变量
+        let singleQubitVisualizer = null;
+        let multiQubitVisualizer = null;
+        
+        // 生成单个量子比特控制面板
+        function generateIndividualControls(qubitCount) {
+            const container = document.getElementById('individualControls');
+            container.innerHTML = ''; // 清空现有内容
+            
+            for (let i = 0; i < qubitCount; i++) {
+                const controlHTML = `
+                    <div class="individual-qubit-control" style="margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        <h4 style="margin-top: 0;">局部量子比特 ${i}（布洛赫角）</h4>
+                        <div class="slider-container">
+                            <label for="theta${i}">极角 θ: <span id="thetaValue${i}">0°</span></label>
+                            <input type="range" id="theta${i}" min="0" max="180" value="0" step="1" class="qubit-theta-slider">
+                        </div>
+                        <div class="slider-container">
+                            <label for="phi${i}">方位角 φ: <span id="phiValue${i}">0°</span></label>
+                            <input type="range" id="phi${i}" min="0" max="360" value="0" step="1" class="qubit-phi-slider">
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += controlHTML;
+            }
+            
+            // 为新生成的滑块添加事件监听
+            attachQubitSliderListeners(qubitCount);
+        }
+        
+        // 为单个量子比特滑块添加事件监听
+        function attachQubitSliderListeners(qubitCount) {
+            for (let i = 0; i < qubitCount; i++) {
+                const thetaSlider = document.getElementById(`theta${i}`);
+                const phiSlider = document.getElementById(`phi${i}`);
+                
+                if (thetaSlider) {
+                    thetaSlider.addEventListener('input', (e) => {
+                        const theta = parseInt(e.target.value);
+                        document.getElementById(`thetaValue${i}`).textContent = `${theta}°`;
+                        // 更新多量子比特可视化中的该量子比特局部态
+                        if (multiQubitVisualizer && typeof multiQubitVisualizer.updateQubitState === 'function') {
+                            multiQubitVisualizer.updateQubitState(i, theta, phiSlider ? phiSlider.value : 0);
+                        }
+                    });
+                }
+                
+                if (phiSlider) {
+                    phiSlider.addEventListener('input', (e) => {
+                        const phi = parseInt(e.target.value);
+                        document.getElementById(`phiValue${i}`).textContent = `${phi}°`;
+                        // 更新多量子比特可视化中的该量子比特局部态
+                        if (multiQubitVisualizer && typeof multiQubitVisualizer.updateQubitState === 'function') {
+                            multiQubitVisualizer.updateQubitState(i, thetaSlider ? thetaSlider.value : 0, phi);
+                        }
+                    });
+                }
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化单量子比特可视化
+            singleQubitVisualizer = new BlochSphereVisualizer('blochSphere');
+            singleQubitVisualizer.updateQuantumState(0, 0);
+            singleQubitVisualizer.updateSliderDisplay();
+            
+            // 初始化多量子比特可视化（默认 2 个比特）
+            multiQubitVisualizer = new MultiQubitVisualizer('multiQubitSphere', 2);
+            
+            // 初始化单个量子比特局部控制面板
+            generateIndividualControls(2);
+            
+            // 设置多量子比特控制按钮
+            document.getElementById('multiResetView').addEventListener('click', () => {
+                if (multiQubitVisualizer && multiQubitVisualizer.controls) multiQubitVisualizer.controls.reset();
+            });
+            
+            document.getElementById('multiToggleRotation').addEventListener('click', (e) => {
+                if (!multiQubitVisualizer) return;
+                multiQubitVisualizer.rotationEnabled = !multiQubitVisualizer.rotationEnabled;
+                e.target.textContent = `旋转: ${multiQubitVisualizer.rotationEnabled ? '开' : '关'}`;
+            });
+            
+            // 添加量子比特数量变化监听（动态更新界面与可视化）
+            document.getElementById('qubitCount').addEventListener('change', (e) => {
+                const qubitNum = parseInt(e.target.value);
+                // 更新显示（更符合量子术语）
+                document.getElementById('qubitCountDisplay').textContent = `${qubitNum} 个`;
+                // 重新初始化多量子比特可视化
+                multiQubitVisualizer = new MultiQubitVisualizer('multiQubitSphere', qubitNum);
+                // 动态生成单个量子比特局部控制面板
+                generateIndividualControls(qubitNum);
+                // 更新系统信息占位文本
+                document.getElementById('stateDimension').textContent = `2^n（n = ${qubitNum}）`;
+                document.getElementById('individualStates').textContent = Array(qubitNum).fill('|0⟩').join(', ');
+            });
+            
+            // 初始化选项卡
+            switchTab('single');
+        });
+        
+        function switchTab(tabName) {
+            // 隐藏所有选项卡内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 移除所有选项卡按钮的活动状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选定的选项卡内容
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // 激活对应的选项卡按钮
+            document.querySelector(`.tab-btn[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            // 调整可视化大小
+            setTimeout(() => {
+                if (tabName === 'single' && singleQubitVisualizer) {
+                    singleQubitVisualizer.onWindowResize();
+                } else if (tabName === 'multi' && multiQubitVisualizer) {
+                    multiQubitVisualizer.onWindowResize();
+                }
+            }, 100);
+        }
+        
+        // 更新CSS以支持选项卡
+        const style = document.createElement('style');
+        style.textContent = `
+            .tab-container {
+                margin-bottom: 20px;
+            }
+            
+            .tabs {
+                display: flex;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                padding: 5px;
+                margin-bottom: 20px;
+            }
+            
+            .tab-btn {
+                flex: 1;
+                padding: 12px 20px;
+                background: transparent;
+                color: #aaa;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1rem;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+            
+            .tab-btn.active {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            }
+            
+            .tab-btn:hover:not(.active) {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            
+            .tab-content {
+                display: none;
+            }
+            
+            .tab-content.active {
+                display: block;
+                animation: fadeIn 0.5s ease;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+    <script>
+        // 门信息与展示逻辑（单/多比特通用）
+        (function(){
+            const gateMeta = {
+                'X': { name: 'Pauli-X', desc: '翻转基态 |0⟩↔|1⟩，类似经典的 NOT。' },
+                'Y': { name: 'Pauli-Y', desc: 'Y 门：引入相位并翻转，矩阵含虚数。' },
+                'Z': { name: 'Pauli-Z', desc: 'Z 门：在 |1⟩ 上加相位 -1，不改变测量概率。' },
+                'H': { name: 'Hadamard', desc: '将基态映射为叠加态，H|0⟩=|+⟩, H|1⟩=|−⟩。' },
+                'S': { name: 'S（相位）', desc: '在 |1⟩ 上施加相位 i（π/2）。' },
+                'T': { name: 'T（π/8）', desc: '在 |1⟩ 上施加相位 e^{iπ/4}（π/8 门）。' },
+                'CNOT': { name: 'CNOT（受控非）', desc: '若控制比特为 |1⟩，则翻转目标比特。默认控制 0，目标 1。' },
+                'SWAP': { name: 'SWAP（交换）', desc: '交换两个比特的状态。' },
+                'CZ': { name: 'CZ（受控-Z）', desc: '若控制与目标均为 |1⟩，在该分量加相位 -1。' },
+                'Bell': { name: '创建 Bell 态', desc: '生成两比特纠缠态 |Φ+⟩=(|00⟩+|11⟩)/√2。' },
+                'GHZ': { name: '创建 GHZ 态', desc: '生成 GHZ 态 (|00...0⟩+|11...1⟩)/√2。' }
+            };
+
+            function formatMatrix(mat) {
+                if (!mat) return '';
+                try {
+                    const size = mat.size ? mat.size() : null;
+                    if (size && size.length === 2) {
+                        const r = size[0];
+                        const c = size[1];
+                        let s = '';
+                        for (let i=0;i<r;i++){
+                            const row = [];
+                            for (let j=0;j<c;j++){
+                                const v = mat.get([i,j]);
+                                const re = math.re(v), im = math.im(v);
+                                if (Math.abs(im) < 1e-10) row.push(re.toFixed(3));
+                                else if (Math.abs(re) < 1e-10) row.push(im.toFixed(3)+'i');
+                                else row.push(re.toFixed(3)+ (im>=0?'+':'-') + Math.abs(im).toFixed(3)+'i');
+                            }
+                            s += '['+row.join(', ')+']\n';
+                        }
+                        return s;
+                    }
+                } catch(e){ return String(mat); }
+                return String(mat);
+            }
+
+            function vecToArray(vec) {
+                const size = vec.size();
+                const r = size[0];
+                const out = [];
+                for (let i=0;i<r;i++){
+                    const v = vec.get([i,0]);
+                    out.push({ re: math.re(v), im: math.im(v) });
+                }
+                return out;
+            }
+
+            function formatAmplitudes(arr){
+                return arr.map((c,i)=>{
+                    const re = c.re, im = c.im;
+                    if (Math.abs(im) < 1e-10) return `${re.toFixed(3)}|${i.toString(2).padStart(Math.log2(arr.length),'0')}⟩`;
+                    return `${re.toFixed(3)}${im>=0?'+':''}${im.toFixed(3)}i|${i.toString(2).padStart(Math.log2(arr.length),'0')}⟩`;
+                }).join(' + ');
+            }
+
+            // 手动提供 2-qubit 矩阵（用于展示）
+            function cnot2(){
+                return math.matrix([
+                    [1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]
+                ]).reshape([4,4]);
+            }
+            function swap2(){
+                return math.matrix([
+                    [1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]
+                ]).reshape([4,4]);
+            }
+            function cz2(){
+                return math.matrix([
+                    [1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,-1]
+                ]).reshape([4,4]);
+            }
+
+            function showSingleGateInfo(gate){
+                const meta = gateMeta[gate] || {name:gate, desc: ''};
+                document.getElementById('gateDesc').textContent = `${meta.name} — ${meta.desc}`;
+
+                // 矩阵
+                const gateMatrix = (QuantumEngine && QuantumEngine.gates && QuantumEngine.gates[gate]) ? QuantumEngine.gates[gate] : null;
+                let matStr = '';
+                if (gateMatrix && typeof gateMatrix === 'object') {
+                    // if it's a function (RX/RY/RZ) skip
+                    if (typeof gateMatrix === 'function') matStr = '[parametric rotation gate]';
+                    else matStr = formatMatrix(gateMatrix);
+                }
+                document.getElementById('gateMatrix').textContent = matStr;
+
+                // 计算过程：使用 singleQubitVisualizer 当前 alpha/beta
+                if (window.singleQubitVisualizer){
+                    const vis = singleQubitVisualizer;
+                    const state = math.matrix([[vis.alpha],[vis.beta]]);
+                    let applied = null;
+                    try {
+                        const M = (gateMatrix && typeof gateMatrix === 'object') ? gateMatrix : null;
+                        if (M) applied = math.multiply(M, state);
+                        else applied = null;
+                    } catch(e){ applied = null; }
+
+                    const before = `初始: ${vis.formatComplex(vis.alpha)}|0⟩ + ${vis.formatComplex(vis.beta)}|1⟩`;
+                    const after = applied ? `作用后: ${formatMatrix(applied)}` : '作用后: （数值计算不可用，例如参数化门）';
+                    document.getElementById('gateComputation').textContent = before + '\n' + after;
+                }
+            }
+
+            function showMultiGateInfo(gate){
+                const meta = gateMeta[gate] || {name:gate, desc: ''};
+                document.getElementById('multiGateDesc').textContent = `${meta.name} — ${meta.desc}`;
+
+                const n = multiQubitVisualizer ? multiQubitVisualizer.numQubits : 2;
+                const global = multiQubitVisualizer ? multiQubitVisualizer.globalState : null;
+                const initArr = global ? vecToArray(global) : null;
+                let token = '';
+                let fullMatStr = '';
+
+                if (gate === 'CNOT') token = `CNOT01`;
+                else if (gate === 'SWAP') token = `SWAP01`;
+                else if (gate === 'CZ') token = `CZ01`;
+                else if (gate === 'Bell') token = `BELL`;
+                else if (gate === 'GHZ') token = `GHZ`;
+
+                // 显示矩阵（仅对于 2 qubit 提供显式矩阵）
+                if (n === 2) {
+                    if (gate === 'CNOT') fullMatStr = formatMatrix(cnot2());
+                    else if (gate === 'SWAP') fullMatStr = formatMatrix(swap2());
+                    else if (gate === 'CZ') fullMatStr = formatMatrix(cz2());
+                } else {
+                    fullMatStr = (gate==='Bell' || gate==='GHZ') ? '[特殊态生成，不以矩阵展示]' : '[仅在 2 比特时展示矩阵]';
+                }
+                document.getElementById('multiGateMatrix').textContent = fullMatStr;
+
+                // 计算过程：使用 QuantumEngine.applySequence 计算结果并展示前后幅值
+                if (initArr && token) {
+                    try {
+                        const result = QuantumEngine.applySequence(token, initArr, n);
+                        const before = `初始（Dirac）： ${QuantumEngine.toDirac(initArr, n)}`;
+                        const after = `作用后（Dirac）： ${QuantumEngine.toDirac(result, n)}`;
+                        document.getElementById('multiGateComputation').textContent = before + '\n' + `应用: ${token}` + '\n' + after;
+                    } catch(e){
+                        document.getElementById('multiGateComputation').textContent = '计算失败：' + e.message;
+                    }
+                } else {
+                    document.getElementById('multiGateComputation').textContent = '无法获取初始态进行计算。';
+                }
+            }
+
+            // 绑定单/多门按钮的展示行为（不替换已有的应用行为）
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('.gate-btn').forEach(btn=>{
+                    btn.addEventListener('click', (e)=>{
+                        const g = e.currentTarget.dataset.gate;
+                        try{ showSingleGateInfo(g); }catch(err){ console.error(err); }
+                    });
+                });
+
+                document.querySelectorAll('.multi-gate-btn').forEach(btn=>{
+                    btn.addEventListener('click', (e)=>{
+                        const g = e.currentTarget.dataset.gate;
+                        try{ showMultiGateInfo(g); }catch(err){ console.error(err); }
+                    });
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
